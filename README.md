@@ -15,6 +15,9 @@ An optimised Python simulation of the Kuramoto Model that visualises the non-lin
 * **Isolating the Macroscopic Steady State:** To ensure the phase transition curve strictly reflects stable configurations, the extraction logic discards the first 75% of simulated time steps (the chaotic transient window). The complex order parameter is averaged over the final 25% of the data array.
 * **Theoretical Calibration:** The critical coupling strength required for synchronization is defined by the natural frequency distribution. By tightly coupling these assumptions with NumPy random seed generation, the simulated order parameter climbs exactly as the coupling strength crosses the mathematically predicted threshold.
 
+<img width="989" height="590" alt="image" src="https://github.com/user-attachments/assets/cf566399-a29d-4a9c-8844-ad08a87056be" />
+
+
 ## Prerequisites
 
 The script relies on external scientific computing and data visualization libraries.
