@@ -1,0 +1,100 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
+
+def kuramoto_deriv(t, theta, omega, K, N):
+    """
+    Computes the derivative of the phases using the mean-field approach.
+    This reduces computational complexity from O(N^2) to O(N).
+    """
+    # Calculate the complex order parameter
+    z = np.mean(np.exp(1j * theta))
+
+    # Extract magnitude (r) and average phase (psi)
+    r = np.abs(z)
+    psi = np.angle(z)
+
+    # Calculate phase derivatives
+    # d(theta_i)/dt = omega_i + K * r * sin(psi - theta_i)
+    dtheta = omega + K * r * np.sin(psi - theta)
+    return dtheta
+
+def simulate_phase_transition():
+    # Simulation Parameters
+    N = 1200                 # Number of oscillators
+    K_values = np.linspace(0, 4, 120)  # Range of coupling strengths to test
+    t_span = (0, 40)        # Time to simulate for each K (0 to 40 seconds)
+    t_eval = np.linspace(t_span[0], t_span[1], 100) # Time points to record
+
+    # Random seed for reproducibility
+    np.random.seed(42)
+
+    # Natural frequencies drawn from a normal dist
+    omega = np.random.uniform(-1, 1, N)
+
+    # Initial random phases between 0 and 2 pi
+    theta_initial = np.random.uniform(0, 2 * np.pi, N)
+
+    # For a normal distribution, the theoretical critical coupling is sqrt(8/pi)
+    K_critical_theory = np.sqrt(8 / np.pi)
+
+    r_steady_states = []
+
+    print(f"Starting simulation of {N} oscillators...")
+    print(f"Theoretical Critical Coupling (K_c) ≈ {K_critical_theory:.2f}")
+
+    # Run Simulation for each K
+    # We use "forward continuation": the final state of the previous K
+    # becomes the initial state of the next K. This helps the system settle faster.
+    current_theta = theta_initial
+
+    for i, K in enumerate(K_values):
+        if i % 10 == 0:
+            print(f"Simulating K = {K:.2f}...")
+
+        # Solve the ODE
+        sol = solve_ivp(
+            kuramoto_deriv,
+            t_span,
+            current_theta,
+            args=(omega, K, N),
+            t_eval=t_eval,
+            method='RK45'
+        )
+
+        # Extract the final 25% of the time steps to calculate steady-state
+        steady_state_thetas = sol.y[:, -25:]
+
+        # Calculate the order parameter 'r' over this steady-state period
+        # r = |(1/N) * sum(e^{i*theta_j})|
+        z_steady = np.mean(np.exp(1j * steady_state_thetas), axis=0) # Mean across oscillators
+        r_mean = np.mean(np.abs(z_steady))                           # Mean across time
+
+        r_steady_states.append(r_mean)
+
+        # Update current_theta for the next iteration (forward continuation)
+        current_theta = sol.y[:, -1]
+
+    # Plotting the Results
+    plt.figure(figsize=(10, 6))
+    plt.plot(K_values, r_steady_states, 'o-', color='#2ca02c', linewidth=2, markersize=6, label='Simulated Order Parameter ($r$)')
+
+    # Plot theoretical critical threshold
+    plt.axvline(x=K_critical_theory, color='#d62728', linestyle='--', linewidth=2, label=f'Theoretical $K_c$ (≈ {K_critical_theory:.2f})')
+
+    # Styling the plot
+    plt.title('Kuramoto Model Phase Transition', fontsize=16, pad=15)
+    plt.xlabel('Coupling Strength ($K$)', fontsize=14)
+    plt.ylabel('Order Parameter ($r$)', fontsize=14)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.legend(fontsize=12, loc='lower right')
+
+    # Add text annotations
+    plt.text(0.5, 0.5, 'Incoherent\n(Independent)', fontsize=12, ha='center', color='gray')
+    plt.text(3.0, 0.5, 'Synchronized\n(Phase-locked)', fontsize=12, ha='center', color='#2ca02c')
+
+    plt.tight_layout()
+    plt.show()
+
+if __name__ == "__main__":
+    simulate_phase_transition()
